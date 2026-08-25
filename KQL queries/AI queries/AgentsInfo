@@ -1,0 +1,3 @@
+AgentsInfo
+| summarize Count=count() by Name
+| order by Count desc
