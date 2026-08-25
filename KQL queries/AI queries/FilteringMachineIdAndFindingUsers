@@ -1,0 +1,51 @@
+//List with all the AI Agents, to take it we can do the query AgentsExtraction, It will take Agents of AI within our organization.
+let AINames = dynamic([
+    "Claude Desktop",
+    "VSCode GitHub Copilot Extension",
+    "ChatGPT Classic",
+    "OpenCode",
+    "GitHub Copilot CLI",
+    "ChatGPT Desktop",
+    "Claude Code",
+    "Ollama Desktop",
+    "VSCode Codex Extension",
+    "VSCode Claude Code Extension",
+    "GitHub Copilot App",
+    "Codex CLI",
+    "Perplexity Desktop",
+    "Antigravity Desktop",
+    "VSCode Cline Extension",
+    "CoCo CLI",
+    "VSCode Gemini Code Assist Extension",
+    "Hermes Agent",
+    "LM Studio",
+    "VSCode Kimi Code Extension",
+    "OpenClaw",
+    "Cursor"
+]);
+// We take all the agents info, with MachineId and SId(sid won´t be useful for MAC devices)
+let AIUsers=
+    AgentsInfo
+    | where Name in~ (AINames)
+    | extend Raw = parse_json(RawAgentInfo)
+    | extend
+        AccountSid = tostring(Raw.localAgentMetadata.accountSid),
+        AccountName = tostring(Raw.localAgentMetadata.accountName),
+        AccountDomain = tostring(Raw.localAgentMetadata.accountDomain),
+        MachineId = tostring(Raw.localAgentMetadata.machineId)
+    | project Name, AccountSid, AccountName, AccountDomain, MachineId;
+// MachineId in Agents is DeviceId in DeviceInfo, and in device info we have the user.
+AIUsers
+| join kind=leftouter (
+    DeviceInfo
+    | summarize arg_max(Timestamp,DeviceName,OSPlatform) by DeviceId
+) on $left.MachineId == $right.DeviceId
+| summarize
+    MachineId = any(MachineId),
+    DeviceName = any(DeviceName),
+    OSPlatform = any(OSPlatform),
+    AccountSid = any(AccountSid),
+    AccountDomain = any(AccountDomain)
+    by Name, AccountName
+| order by Name asc, AccountName asc
+
